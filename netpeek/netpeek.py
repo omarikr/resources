@@ -5,8 +5,8 @@ import requests
 import psutil
 import ping3
 from tabulate import tabulate
+import time
 
-# ASCII network icon
 ascii_icon = r"""
       ___      ___
      (o o)    (o o)
@@ -32,7 +32,14 @@ def get_local_ip():
 def get_gateway():
     try:
         gws = psutil.net_if_addrs()
-        return psutil.net_if_stats()
+        for interface, addrs in gws.items():
+            for addr in addrs:
+                if addr.family.name == 'AF_INET' and not addr.address.startswith("127."):
+                    # Return first IP in interface + 1 as gateway guess
+                    ip_parts = addr.address.split(".")
+                    ip_parts[-1] = "1"
+                    return ".".join(ip_parts)
+        return "N/A"
     except:
         return "N/A"
 
@@ -53,7 +60,7 @@ def get_ping_latency(host="8.8.8.8"):
 def get_bandwidth_usage():
     try:
         net1 = psutil.net_io_counters()
-        os.sleep(1)
+        time.sleep(1)
         net2 = psutil.net_io_counters()
         sent = (net2.bytes_sent - net1.bytes_sent) / 1024
         recv = (net2.bytes_recv - net1.bytes_recv) / 1024
@@ -66,7 +73,7 @@ if __name__ == "__main__":
     data = [
         ["Public IP", get_public_ip()],
         ["Local IP", get_local_ip()],
-        ["Gateway", "N/A"],  # Could be improved with netifaces
+        ["Gateway", get_gateway()],
         ["DNS Servers", ", ".join(get_dns_servers())],
         ["Ping Latency", get_ping_latency()],
         ["Bandwidth", get_bandwidth_usage()]
